@@ -11,18 +11,11 @@
 
 
 const char* deviceExtensions[] = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
 
 
-VkSubpassDependency dependency = {
-    .srcSubpass = VK_SUBPASS_EXTERNAL,
-    .dstSubpass = 0,
-    .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-    .srcAccessMask = 0,
-    .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-    .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
-};
+
 
 VkPipelineRasterizationStateCreateInfo rasterizer = {
     .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -85,8 +78,7 @@ int main(){
     
     VkSurfaceKHR surface;
     SDL_Vulkan_CreateSurface(window.window, vulkan_instance, NULL, &surface);
-
-
+    VkPhysicalDevice physicalDevice = createPhysicalDevice(vulkan_instance); 
     VkSurfaceCapabilitiesKHR capabilities;
     VkResult res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
 
@@ -100,7 +92,6 @@ int main(){
     if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
         imageCount = capabilities.maxImageCount;
     }
-
     QueueFamilyIndices queueFamilies = findQueueFamilies(physicalDevice, surface);
     
     VkDeviceQueueCreateInfo queueCreateInfos[2];
@@ -149,7 +140,7 @@ int main(){
     VkSwapchainCreateInfoKHR swapchainCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = surface,
-        .minImageCount = 3, // Triple buffering
+        .minImageCount = imageCount,
         .imageFormat = selectedFormat.format,
         .imageColorSpace = selectedFormat.colorSpace,
         .imageExtent = swapExtent,
@@ -161,88 +152,11 @@ int main(){
         .clipped = VK_TRUE
     };
 
-    VkSwapchainKHR swapChain = createSwapchain(device, swapchainCreateInfo);
-    printf("swapchain criada\n");
-    uint32_t swapchainImageCount;
-    vkGetSwapchainImagesKHR(device, swapChain, &swapchainImageCount, NULL); // Pega a quantidade
-    VkImage* swapChainImages = malloc(sizeof(VkImage) * imageCount);
-    vkGetSwapchainImagesKHR(device, swapChain, &swapchainImageCount, swapChainImages); // Pega os handles
-    VkImageView* swapchainImageViews;
-    swapchainImageViews = malloc(sizeof(VkImageView) * swapchainImageCount);
-    for (uint32_t i = 0; i < swapchainImageCount; i++) {
-        VkImageViewCreateInfo viewInfo = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = swapChainImages[i],
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = selectedFormat.format, // O formato que você escolheu antes
-            .components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .subresourceRange.baseMipLevel = 0,
-            .subresourceRange.levelCount = 1,
-            .subresourceRange.baseArrayLayer = 0,
-            .subresourceRange.layerCount = 1
-        };
+    VkSwapchainKHR swapchain = createSwapchain(device, swapchainCreateInfo);
+    VKSwapchainImages swapchainImages = getSwapchainImages(device, swapchain, imageCount, selectedFormat.format);
+    VkRenderPass renderPass = createRenderPass(device, selectedFormat.format);
 
-        if (vkCreateImageView(device, &viewInfo, NULL, &swapchainImageViews[i]) != VK_SUCCESS) {
-            SDL_Log("Erro ao criar ImageView %d", i);
-        }
-    }
-
-    VkAttachmentDescription colorAttachment = {
-        .format = selectedFormat.format,        // O formato SRGB que você escolheu
-        .samples = VK_SAMPLE_COUNT_1_BIT,       // Sem anti-aliasing (MSAA) por enquanto
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,  // Limpar a tela antes de desenhar
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,// Salvar o que desenhamos para ver na tela
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,     // Não importa o layout anterior
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR  // Layout pronto para ser exibido na tela
-    };
-    VkAttachmentReference colorAttachmentRef = {
-        .attachment = 0, // Índice no array de anexos
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // Layout durante o desenho
-    };
-
-    VkSubpassDescription subpass = {
-        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &colorAttachmentRef
-    };
-    VkRenderPassCreateInfo renderPassInfo = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .attachmentCount = 1,
-        .pAttachments = &colorAttachment,
-        .subpassCount = 1,
-        .pSubpasses = &subpass,
-        .dependencyCount = 1,
-        .pDependencies = &dependency
-    };
-
-    VkRenderPass renderPass;
-    if (vkCreateRenderPass(device, &renderPassInfo, NULL, &renderPass) != VK_SUCCESS) {
-        SDL_Log("Falha ao criar o Render Pass!");
-        return -1;
-    }
-    VkFramebuffer* swapChainFramebuffers = malloc(sizeof(VkFramebuffer) * imageCount);
-
-    for (size_t i = 0; i < imageCount; i++) {
-        VkImageView attachments[] = { swapchainImageViews[i] };
-
-        VkFramebufferCreateInfo framebufferInfo = {
-            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass = renderPass,    // <--- O mesmo Render Pass para todos!
-            .attachmentCount = 1,
-            .pAttachments = attachments, // <--- A imagem específica deste frame
-            .width = swapExtent.width,
-            .height = swapExtent.height,
-            .layers = 1
-        };
-
-        vkCreateFramebuffer(device, &framebufferInfo, NULL, &swapChainFramebuffers[i]);
-    }
+    VkFramebuffer* frameBuffers = createFramebuffers(&device, imageCount, &swapchainImages, &renderPass, swapExtent);
 
     size_t vertSize, fragSize;
     char* vertCode = readFile("./mesh_basic.vert.spv", &vertSize);
@@ -434,7 +348,7 @@ int main(){
 
         // 3. Pedir uma imagem da Swapchain
         uint32_t imageIndex;
-        vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
         // 4. ABRIR A GRAVAÇÃO (Resolve o seu erro!)
         vkResetCommandBuffer(commandBuffer, 0);
@@ -445,7 +359,7 @@ int main(){
         VkRenderPassBeginInfo rpBegin = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             .renderPass = renderPass,
-            .framebuffer = swapChainFramebuffers[imageIndex], // Usa o índice que pegamos no passo 3
+            .framebuffer = frameBuffers[imageIndex], // Usa o índice que pegamos no passo 3
             .renderArea.extent = swapExtent,
             .clearValueCount = 1,
             .pClearValues = &clearColor
@@ -483,21 +397,21 @@ int main(){
             .waitSemaphoreCount = 1,
             .pWaitSemaphores = &renderFinishedSemaphore, // Espera o desenho acabar
             .swapchainCount = 1,
-            .pSwapchains = &swapChain,
+            .pSwapchains = &swapchain,
             .pImageIndices = &imageIndex
         };
 
         vkQueuePresentKHR(presentQueue, &presentInfo);
         vkQueueWaitIdle(presentQueue);
     }
-    for (uint32_t i = 0; i < swapchainImageCount; i++) {
-        vkDestroyImageView(device, swapchainImageViews[i], NULL);
+    for (uint32_t i = 0; i < swapchainImages.swapchainImageCount; i++) {
+        vkDestroyImageView(device, swapchainImages.swapchainImageViews[i], NULL);
     }
     for (uint32_t i = 0; i < imageCount; i++) {
-        vkDestroyFramebuffer(device, swapChainFramebuffers[i], NULL);
+        vkDestroyFramebuffer(device, frameBuffers[i], NULL);
     }
-    free(swapChainFramebuffers);
-    free(swapChainImages);
+    free(frameBuffers);
+    free(swapchainImages.swapChainImages);
     vkDestroySemaphore(device, imageAvailableSemaphore, NULL);
     vkDestroySemaphore(device, renderFinishedSemaphore, NULL);
     vkDestroyFence(device, inFlightFence, NULL);
@@ -507,7 +421,7 @@ int main(){
     vkDestroyPipelineLayout(device, pipelineLayout, NULL);
     vkDestroyPipeline(device, graphicsPipeline, NULL);
     vkDestroyRenderPass(device, renderPass, NULL);
-    destroySwapchain(device, swapChain, NULL);
+    destroySwapchain(device, swapchain, NULL);
     vkDestroyDevice(device, NULL);
     vkDestroySurfaceKHR(vulkan_instance, surface, NULL);
     vkDestroyInstance(vulkan_instance, NULL);

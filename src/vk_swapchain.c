@@ -1,5 +1,14 @@
 #include "vk_swapchain.h"
 
+VkSubpassDependency dependency = {
+    .srcSubpass = VK_SUBPASS_EXTERNAL,
+    .dstSubpass = 0,
+    .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    .srcAccessMask = 0,
+    .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+};
+
 VkPresentModeKHR chooseSwapPresentMode(VkPhysicalDevice device, VkSurfaceKHR surface) {
     uint32_t presentModeCount;
     vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, NULL);
@@ -50,6 +59,105 @@ VkSwapchainKHR createSwapchain(VkDevice device, VkSwapchainCreateInfoKHR swapcha
     vkCreateSwapchainKHR(device, &swapchainCreateInfo, NULL, &swapChain);
     return swapChain;
 }
+
+VKSwapchainImages getSwapchainImages(VkDevice device, VkSwapchainKHR swapchain, uint32_t imageCount, VkFormat imageColorFormat){
+    printf("Getting SwapChain images...\n");
+    uint32_t swapchainImageCount;
+    vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, NULL); // Pega a quantidade
+    VkImage* swapChainImages = malloc(sizeof(VkImage) * imageCount);
+    vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, swapChainImages); // Pega os handles
+    VkImageView* swapchainImageViews = malloc(sizeof(VkImageView) * imageCount);
+    for (uint32_t i = 0; i < swapchainImageCount; i++) {
+        VkImageViewCreateInfo viewInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = swapChainImages[i],
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = imageColorFormat,
+            .components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .subresourceRange.baseMipLevel = 0,
+            .subresourceRange.levelCount = 1,
+            .subresourceRange.baseArrayLayer = 0,
+            .subresourceRange.layerCount = 1
+        };
+
+        if (vkCreateImageView(device, &viewInfo, NULL, &swapchainImageViews[i]) != VK_SUCCESS) {
+            printf("Erro ao criar ImageView %d\n", i);
+            exit(1);
+        }
+    }
+    VKSwapchainImages swapchainImages = {
+        .swapChainImages = swapChainImages,
+        .swapchainImageCount = swapchainImageCount,
+        .swapchainImageViews = swapchainImageViews
+    };
+    return swapchainImages;
+}
+
+
 void destroySwapchain(VkDevice device, VkSwapchainKHR swapchain, VkAllocationCallbacks *pAllocator){
     vkDestroySwapchainKHR(device, swapchain, pAllocator);
+}
+
+VkRenderPass createRenderPass(VkDevice device, VkFormat imageColorFormat){
+    VkAttachmentDescription colorAttachment = {
+        .format = imageColorFormat,        // O formato SRGB que você escolheu
+        .samples = VK_SAMPLE_COUNT_1_BIT,       // Sem anti-aliasing (MSAA) por enquanto
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,  // Limpar a tela antes de desenhar
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,// Salvar o que desenhamos para ver na tela
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,     // Não importa o layout anterior
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR  // Layout pronto para ser exibido na tela
+    };
+    VkAttachmentReference colorAttachmentRef = {
+        .attachment = 0, // Índice no array de anexos
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // Layout durante o desenho
+    };
+
+    VkSubpassDescription subpass = {
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &colorAttachmentRef
+    };
+    VkRenderPassCreateInfo renderPassInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .attachmentCount = 1,
+        .pAttachments = &colorAttachment,
+        .subpassCount = 1,
+        .pSubpasses = &subpass,
+        .dependencyCount = 1,
+        .pDependencies = &dependency
+    };
+
+    VkRenderPass renderPass;
+    if (vkCreateRenderPass(device, &renderPassInfo, NULL, &renderPass) != VK_SUCCESS) {
+        SDL_Log("Falha ao criar o Render Pass!");
+        exit(1);
+    }
+    return renderPass;
+}
+
+VkFramebuffer* createFramebuffers(VkDevice* device, uint32_t imageCount, VKSwapchainImages* swapchainImages, VkRenderPass* renderPass, VkExtent2D swapExtent){
+    VkFramebuffer* swapchainFramebuffers = malloc(sizeof(VkFramebuffer) * imageCount);
+
+    for (size_t i = 0; i < imageCount; i++) {
+        VkImageView attachments[] = { swapchainImages->swapchainImageViews[i] };
+
+        VkFramebufferCreateInfo framebufferInfo = {
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .renderPass = *renderPass,    // <--- O mesmo Render Pass para todos!
+            .attachmentCount = 1,
+            .pAttachments = attachments, // <--- A imagem específica deste frame
+            .width = swapExtent.width,
+            .height = swapExtent.height,
+            .layers = 1
+        };
+
+        vkCreateFramebuffer(*device, &framebufferInfo, NULL, &swapchainFramebuffers[i]);
+    }
+    return swapchainFramebuffers;
 }

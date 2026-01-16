@@ -1,6 +1,15 @@
 #pragma once
 #include "vulkan_triangle.h"
 
+typedef struct {
+    uint32_t swapchainImageCount;
+    VkImage* swapChainImages;
+    VkImageView* swapchainImageViews;
+} VKSwapchainImages;
+
+
+extern VkSubpassDependency dependency;
+
 
 /*
 * Choose an present mode for a swapchain (defines the swapchain length).
@@ -27,5 +36,10 @@ extern VkSurfaceFormatKHR chooseSwapSurfaceFormat(VkSurfaceFormatKHR* formats, u
 
 extern VkSwapchainKHR createSwapchain(VkDevice device, VkSwapchainCreateInfoKHR swapchainCreateInfo);
 
+extern VKSwapchainImages getSwapchainImages(VkDevice device, VkSwapchainKHR swapchain, uint32_t imageCount, VkFormat imageColorFormat);
+
 extern void destroySwapchain(VkDevice device, VkSwapchainKHR swapchain, VkAllocationCallbacks *pAllocator);
 
+extern VkRenderPass createRenderPass(VkDevice device, VkFormat imageColorFormat);
+
+extern VkFramebuffer* createFramebuffers(VkDevice* device, uint32_t imageCount, VKSwapchainImages* swapchainImages, VkRenderPass* renderPass, VkExtent2D swapExtent);

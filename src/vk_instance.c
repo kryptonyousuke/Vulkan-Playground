@@ -17,14 +17,14 @@ VkApplicationInfo appInfo = {
 VkInstance createVkInstance(){
     uint32_t sdlExtensionCount = 0;
     const char* const* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount);
-
-    bool enableValidationLayers = true; 
+    const char* const* vulkanInstanceEXTs = sdlExtensions; // future additions here
+    bool enableValidationLayers = DEBUG; 
 
     VkInstanceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pApplicationInfo = &appInfo,
         .enabledExtensionCount = sdlExtensionCount,
-        .ppEnabledExtensionNames = sdlExtensions,
+        .ppEnabledExtensionNames = vulkanInstanceEXTs,
         .pNext = NULL
     };
 

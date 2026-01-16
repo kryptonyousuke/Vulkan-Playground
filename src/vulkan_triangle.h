@@ -19,6 +19,6 @@
 #include "sys_interaction.h"
 #include "vk_instance.h"
 #include "vk_swapchain.h"
-#include "vk_device.h"
+#include "vk_logical_device.h"
 #include "vk_physical_device.h"
 #include "vk_pipeline.h"
