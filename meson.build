@@ -15,7 +15,8 @@ vulkan_triangle_src = [
         'src/vk_instance.c',
         'src/vk_pipeline.c',
         'src/vk_physical_device.c',
-        'src/vk_logical_device.c'
+        'src/vk_logical_device.c',
+        'src/vk_mem.c'
 ]
 
 glslc = find_program('glslc')
