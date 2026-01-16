@@ -1,67 +1,5 @@
 #include "vulkan_triangle.h"
-#include "src/vk_swapchain.h"
 #include <string.h>
-#include <vulkan/vulkan_core.h>
-
-/*
-
-    Structures for vulkan initialization and use.
-
-*/
-
-
-const char* deviceExtensions[] = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-};
-
-
-
-
-VkPipelineRasterizationStateCreateInfo rasterizer = {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-    .depthClampEnable = VK_FALSE,
-    .rasterizerDiscardEnable = VK_FALSE,
-    .polygonMode = VK_POLYGON_MODE_FILL,
-    .lineWidth = 1.0f,
-    .cullMode = VK_CULL_MODE_BACK_BIT,
-    .frontFace = VK_FRONT_FACE_CLOCKWISE,
-    .depthBiasEnable = VK_FALSE
-};
-VkPipelineMultisampleStateCreateInfo multisampling = {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-    .sampleShadingEnable = VK_FALSE,
-    .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT
-};
-VkPipelineColorBlendAttachmentState colorBlendAttachment = {
-    .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-    .blendEnable = VK_FALSE
-};
-
-VkPipelineInputAssemblyStateCreateInfo inputAssembly = {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-    .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-    .primitiveRestartEnable = VK_FALSE
-};
-
-VkPipelineLayoutCreateInfo pipelineLayoutInfo = {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO
-};
-
-// Define como os dados estão organizados na memória
-VkVertexInputBindingDescription bindingDescription = {
-    .binding = 0,
-    .stride = sizeof(float) * 5, // Ex: 3 floats para posição + 2 para UV (ou 3 para cor)
-    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-};
-// Define o que cada "Location" no Shader recebe
-VkVertexInputAttributeDescription attributeDescriptions[1] = {
-    {
-        .binding = 0,
-        .location = 0, // <--- Isto resolve o erro do Location 0!
-        .format = VK_FORMAT_R32G32B32_SFLOAT, // vec3 (x, y, z)
-        .offset = 0
-    }
-};
 
 
 
@@ -110,21 +48,8 @@ int main(){
         return -1;
     }
 
-    VkPhysicalDeviceFeatures deviceFeatures = {0};
+    VkDevice device = createLogicalDevice(physicalDevice, queueCreateInfos, queueCount);
 
-    VkDeviceCreateInfo deviceCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount = queueCount,
-        .pQueueCreateInfos = queueCreateInfos,
-        .enabledExtensionCount = 1,
-        .ppEnabledExtensionNames = deviceExtensions,
-        .pEnabledFeatures = &deviceFeatures
-    };
-    VkDevice device;
-    if (vkCreateDevice(physicalDevice, &deviceCreateInfo, NULL, &device) != VK_SUCCESS) {
-        fprintf(stderr, "Falha ao criar o Dispositivo Lógico!");
-        return -1;
-    }
     VkQueue graphicsQueue;
     VkQueue presentQueue;
     vkGetDeviceQueue(device, queueFamilies.graphicsFamily, 0, &graphicsQueue);
@@ -155,166 +80,16 @@ int main(){
     VkSwapchainKHR swapchain = createSwapchain(device, swapchainCreateInfo);
     VKSwapchainImages swapchainImages = getSwapchainImages(device, swapchain, imageCount, selectedFormat.format);
     VkRenderPass renderPass = createRenderPass(device, selectedFormat.format);
-
     VkFramebuffer* frameBuffers = createFramebuffers(&device, imageCount, &swapchainImages, &renderPass, swapExtent);
-
-    size_t vertSize, fragSize;
-    char* vertCode = readFile("./mesh_basic.vert.spv", &vertSize);
-    char* fragCode = readFile("./mesh_basic.frag.spv", &fragSize);
-    VkShaderModule vertModule = createShaderModule(device, vertCode, vertSize);
-    VkShaderModule fragModule = createShaderModule(device, fragCode, fragSize);
-    free(vertCode);
-    free(fragCode);
-    VkPipelineShaderStageCreateInfo vertStageInfo = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = vertModule,
-        .pName = "main" // Nome da função de entrada no seu GLSL
-    };
-
-    VkPipelineShaderStageCreateInfo fragStageInfo = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = fragModule,
-        .pName = "main"
-    };
-
-
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions = &bindingDescription,
-        .vertexAttributeDescriptionCount = 1,
-        .pVertexAttributeDescriptions = attributeDescriptions
-    };
-
-
-    VkViewport viewport = {
-        .x = 0.0f, .y = 0.0f,
-        .width = (float)swapExtent.width,
-        .height = (float)swapExtent.height,
-        .minDepth = 0.0f, .maxDepth = 1.0f
-    };
-
-    VkRect2D scissor = { .offset = {0, 0}, .extent = swapExtent };
-
-    VkPipelineViewportStateCreateInfo viewportState = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-        .viewportCount = 1,
-        .pViewports = &viewport,
-        .scissorCount = 1,
-        .pScissors = &scissor
-    };
-
-    
-    VkPipelineColorBlendStateCreateInfo colorBlending = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .logicOpEnable = VK_FALSE,
-        .attachmentCount = 1,
-        .pAttachments = &colorBlendAttachment
-    };
-
-    VkPipelineLayout pipelineLayout;
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, NULL, &pipelineLayout) != VK_SUCCESS) {
-        SDL_Log("Erro ao criar Pipeline Layout!");
-        return -1;
-    }
-    VkPipelineShaderStageCreateInfo shaderStages[] = {vertStageInfo, fragStageInfo};
-    VkGraphicsPipelineCreateInfo pipelineInfo = {
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .stageCount = 2,
-        .pStages = shaderStages, // <--- AQUI entram os shaders!
-        
-        // ... aqui entram as outras structs (VertexInput, Rasterizer, etc) ...
-        .pVertexInputState = &vertexInputInfo,
-        .pInputAssemblyState = &inputAssembly,
-        .pViewportState = &viewportState,
-        .pRasterizationState = &rasterizer,
-        .pMultisampleState = &multisampling,
-        .pColorBlendState = &colorBlending,
-        .layout = pipelineLayout,
-        .renderPass = renderPass,
-        .subpass = 0
-    };
-
-    VkPipeline graphicsPipeline;
-    vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &graphicsPipeline);
-    vkDestroyShaderModule(device, vertModule, NULL);
-    vkDestroyShaderModule(device, fragModule, NULL);
-    // Precisamos encontrar o índice da família de filas que suporta gráficos
-// Você provavelmente já fez isso para criar o Device, use o mesmo índice aqui.
-    VkCommandPoolCreateInfo poolInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = queueFamilies.graphicsFamily
-    };
-
-    VkCommandPool commandPool;
-    if (vkCreateCommandPool(device, &poolInfo, NULL, &commandPool) != VK_SUCCESS) {
-        SDL_Log("Falha ao criar Command Pool!");
-        return -1;
-    }
-    VkCommandBufferAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = commandPool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1
-    };
-
-    VkCommandBuffer commandBuffer;
-    if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
-        SDL_Log("Falha ao alocar command buffer!");
-    }
-    typedef struct {
-        float pos[2];
-        float color[3];
-    } Vertex;
+    VKPipelineWorktools pipelineWorktools = createPipeline(&device, swapExtent, &queueFamilies, &renderPass);
 
     const Vertex vertices[] = {
         {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Topo (Vermelho)
         {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}}, // Direita (Verde)
         {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}  // Esquerda (Azul)
     };
-    VkBuffer vertexBuffer;
-    VkBufferCreateInfo bufferInfo = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = sizeof(vertices),
-        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
-    };
-    VkExternalMemoryBufferCreateInfo externalInfo = {
-        .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO,
-        .pNext = NULL,
-        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT 
-    };
+    VKMemory vertexPostAllocationData = VKMemStoreVertex(physicalDevice, device, vertices, sizeof(vertices));
 
-    bufferInfo.pNext = &externalInfo;
-    if (vkCreateBuffer(device, &bufferInfo, NULL, &vertexBuffer) != VK_SUCCESS) {
-        SDL_Log("Falha ao criar Vertex Buffer!");
-        return -1;
-    }
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
-
-    VkMemoryAllocateInfo memAllocInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, 
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-    };
-
-    VkDeviceMemory vertexBufferMemory;
-    
-    vkAllocateMemory(device, &memAllocInfo, NULL, &vertexBufferMemory);
-
-    // "Colar" a memória ao buffer
-    vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
-    void* data;
-    vkMapMemory(device, vertexBufferMemory, 0, sizeof(vertices), 0, &data);
-    
-    memset(data, 0, memAllocInfo.allocationSize);
-    memcpy(data, vertices, sizeof(vertices));
-    vkUnmapMemory(device, vertexBufferMemory);
     VkSemaphore imageAvailableSemaphore;
     VkSemaphore renderFinishedSemaphore;
 
@@ -351,9 +126,9 @@ int main(){
         vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
         // 4. ABRIR A GRAVAÇÃO (Resolve o seu erro!)
-        vkResetCommandBuffer(commandBuffer, 0);
+        vkResetCommandBuffer(pipelineWorktools.commandBuffer, 0);
         VkCommandBufferBeginInfo beginInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+        vkBeginCommandBuffer(pipelineWorktools.commandBuffer, &beginInfo);
         // 5. Iniciar o Render Pass (Diz onde desenhar)
         VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
         VkRenderPassBeginInfo rpBegin = {
@@ -364,18 +139,18 @@ int main(){
             .clearValueCount = 1,
             .pClearValues = &clearColor
         };
-        vkCmdBeginRenderPass(commandBuffer, &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(pipelineWorktools.commandBuffer, &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
         // 6. COMANDOS DE DESENHO (Agora sim eles funcionam!)
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+        vkCmdBindPipeline(pipelineWorktools.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineWorktools.graphicsPipeline);
         
         VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, &offsets[0]);
+        vkCmdBindVertexBuffers(pipelineWorktools.commandBuffer, 0, 1, &vertexPostAllocationData.vertexBuffer, &offsets[0]);
         
-        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-        vkCmdEndRenderPass(commandBuffer);
+        vkCmdDraw(pipelineWorktools.commandBuffer, 3, 1, 0, 0);
+        vkCmdEndRenderPass(pipelineWorktools.commandBuffer);
 
         // 7. FECHAR A GRAVAÇÃO
-        vkEndCommandBuffer(commandBuffer);
+        vkEndCommandBuffer(pipelineWorktools.commandBuffer);
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
         VkSubmitInfo submitInfo = {
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -383,7 +158,7 @@ int main(){
             .pWaitSemaphores = &imageAvailableSemaphore, // Espera a imagem estar pronta
             .pWaitDstStageMask = waitStages,
             .commandBufferCount = 1,
-            .pCommandBuffers = &commandBuffer,
+            .pCommandBuffers = &pipelineWorktools.commandBuffer,
             .signalSemaphoreCount = 1,
             .pSignalSemaphores = &renderFinishedSemaphore // Avisa quando acabar de desenhar
         };
@@ -415,11 +190,11 @@ int main(){
     vkDestroySemaphore(device, imageAvailableSemaphore, NULL);
     vkDestroySemaphore(device, renderFinishedSemaphore, NULL);
     vkDestroyFence(device, inFlightFence, NULL);
-    vkDestroyCommandPool(device, commandPool, NULL); // command buffer is destroyed here too.
-    vkDestroyBuffer(device, vertexBuffer, NULL);
-    vkFreeMemory(device, vertexBufferMemory, NULL);
-    vkDestroyPipelineLayout(device, pipelineLayout, NULL);
-    vkDestroyPipeline(device, graphicsPipeline, NULL);
+    vkDestroyCommandPool(device, pipelineWorktools.commandPool, NULL); // command buffer is destroyed here too.
+    vkDestroyBuffer(device, vertexPostAllocationData.vertexBuffer, NULL);
+    vkFreeMemory(device, vertexPostAllocationData.vertexBufferMemory, NULL);
+    vkDestroyPipelineLayout(device, pipelineWorktools.pipelineLayout, NULL);
+    vkDestroyPipeline(device, pipelineWorktools.graphicsPipeline, NULL);
     vkDestroyRenderPass(device, renderPass, NULL);
     destroySwapchain(device, swapchain, NULL);
     vkDestroyDevice(device, NULL);

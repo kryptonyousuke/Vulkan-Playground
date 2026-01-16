@@ -1,4 +1,4 @@
 #pragma once
 #include "vulkan_triangle.h"
-#define DEBUG true
+#define DEBUG false
 VkInstance createVkInstance();

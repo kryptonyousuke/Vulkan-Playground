@@ -22,3 +22,4 @@
 #include "vk_logical_device.h"
 #include "vk_physical_device.h"
 #include "vk_pipeline.h"
+#include "vk_mem.h"

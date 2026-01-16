@@ -1,6 +1,4 @@
 #pragma once
-#include "vulkan_triangle.h"
-
 
 struct QueueFamilyIndices {
         int graphicsFamily;
@@ -9,6 +7,14 @@ struct QueueFamilyIndices {
 
 
 typedef struct QueueFamilyIndices QueueFamilyIndices;
+typedef struct {
+    float pos[2];
+    float color[3];
+} Vertex;
+#include "vulkan_triangle.h"
+
+
+
 
 /*
 * Searchs queue families supported by a device.
