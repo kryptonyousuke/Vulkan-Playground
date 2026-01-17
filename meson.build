@@ -7,16 +7,21 @@ lib_vulkan = dependency('vulkan')
 lib_sdl3 = dependency('sdl3')
 dependencies = [lib_vulkan, lib_sdl3]
 vulkan_triangle_src = [
-        'src/vulkan_triangle.c',
-        'src/vk_utils.c',
-        'src/SDL_UTILS/SDL3_UTILS.c',
-        'src/sys_interaction.c',
-        'src/vk_swapchain.c',
-        'src/vk_instance.c',
-        'src/vk_pipeline.c',
-        'src/vk_physical_device.c',
-        'src/vk_logical_device.c',
-        'src/vk_mem.c'
+        # main program
+        'src/playground/vulkan_triangle.c',
+        
+        # OhMyVulkan
+        'src/OhMyVulkan/vk_utils.c',
+        'src/OhMyVulkan/vk_swapchain.c',
+        'src/OhMyVulkan/vk_instance.c',
+        'src/OhMyVulkan/vk_pipeline.c',
+        'src/OhMyVulkan/vk_physical_device.c',
+        'src/OhMyVulkan/vk_logical_device.c',
+        'src/OhMyVulkan/vk_mem.c',
+        
+        # utilities
+        'src/utils/SDL_UTILS/SDL3_UTILS.c',
+        'src/utils/sys_interaction.c',
 ]
 
 glslc = find_program('glslc')
