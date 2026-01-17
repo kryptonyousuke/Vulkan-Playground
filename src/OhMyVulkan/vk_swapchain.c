@@ -61,7 +61,6 @@ VkSwapchainKHR createSwapchain(VkDevice device, VkSwapchainCreateInfoKHR swapcha
 }
 
 VKSwapchainImages getSwapchainImages(VkDevice device, VkSwapchainKHR swapchain, uint32_t imageCount, VkFormat imageColorFormat){
-    printf("Getting SwapChain images...\n");
     uint32_t swapchainImageCount;
     vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, NULL); // Pega a quantidade
     VkImage* swapChainImages = malloc(sizeof(VkImage) * imageCount);
@@ -160,4 +159,14 @@ VkFramebuffer* createFramebuffers(VkDevice* device, uint32_t imageCount, VKSwapc
         vkCreateFramebuffer(*device, &framebufferInfo, NULL, &swapchainFramebuffers[i]);
     }
     return swapchainFramebuffers;
+}
+void destroyImageViews(VkDevice device, VKSwapchainImages swapchainImages){
+    for (uint32_t i = 0; i < swapchainImages.swapchainImageCount; i++) {
+        vkDestroyImageView(device, swapchainImages.swapchainImageViews[i], NULL);
+    }
+}
+void destroyFramebuffers(VkDevice device, VkFramebuffer* frameBuffers, int framebufferCount){
+    for (uint32_t i = 0; i < framebufferCount; i++) {
+        vkDestroyFramebuffer(device, frameBuffers[i], NULL);
+    }
 }

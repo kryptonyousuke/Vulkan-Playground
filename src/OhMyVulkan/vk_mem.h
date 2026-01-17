@@ -1,5 +1,5 @@
 #pragma once
-#include "vulkan_triangle.h"
+#include "vk_instance.h"
 typedef struct {
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;

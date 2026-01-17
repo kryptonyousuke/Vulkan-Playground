@@ -1,4 +1,5 @@
 #include "vk_pipeline.h"
+#include "../utils/sys_interaction.h"
 // Define como os dados estão organizados na memória
 VkVertexInputBindingDescription bindingDescription = {
     .binding = 0,
@@ -49,13 +50,25 @@ VkPipelineInputAssemblyStateCreateInfo inputAssembly = {
 };
 
 
+VkDynamicState dynamicStates[] = {
+    VK_DYNAMIC_STATE_VIEWPORT,
+    VK_DYNAMIC_STATE_SCISSOR
+};
 
-VKPipelineWorktools createPipeline(VkDevice* device, VkExtent2D swapExtent, QueueFamilyIndices* queueFamilies, VkRenderPass* renderPass){
+VkPipelineDynamicStateCreateInfo dynamicStateInfo = {
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+    .dynamicStateCount = 2,
+    .pDynamicStates = dynamicStates
+};
+
+
+
+VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, QueueFamilyIndices* queueFamilies, VkRenderPass* renderPass){
     size_t vertSize, fragSize;
     char* vertCode = readFile("./mesh_basic.vert.spv", &vertSize);
     char* fragCode = readFile("./mesh_basic.frag.spv", &fragSize);
-    VkShaderModule vertModule = createShaderModule(*device, vertCode, vertSize);
-    VkShaderModule fragModule = createShaderModule(*device, fragCode, fragSize);
+    VkShaderModule vertModule = createShaderModule(device, vertCode, vertSize);
+    VkShaderModule fragModule = createShaderModule(device, fragCode, fragSize);
     free(vertCode);
     free(fragCode);
     VkPipelineShaderStageCreateInfo vertStageInfo = {
@@ -108,7 +121,7 @@ VKPipelineWorktools createPipeline(VkDevice* device, VkExtent2D swapExtent, Queu
     };
 
     VkPipelineLayout pipelineLayout;
-    if (vkCreatePipelineLayout(*device, &pipelineLayoutInfo, NULL, &pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, NULL, &pipelineLayout) != VK_SUCCESS) {
         SDL_Log("Erro ao criar Pipeline Layout!");
         exit(1);
     }
@@ -121,7 +134,10 @@ VKPipelineWorktools createPipeline(VkDevice* device, VkExtent2D swapExtent, Queu
         // ... aqui entram as outras structs (VertexInput, Rasterizer, etc) ...
         .pVertexInputState = &vertexInputInfo,
         .pInputAssemblyState = &inputAssembly,
-        .pViewportState = &viewportState,
+        // .pViewportState = &viewportState,
+        // Desactivated because DynamicStates allow us to not recreate the pipeline
+        // on each resize. In other words, for performance.
+        .pDynamicState = &dynamicStateInfo,
         .pRasterizationState = &rasterizer,
         .pMultisampleState = &multisampling,
         .pColorBlendState = &colorBlending,
@@ -131,9 +147,9 @@ VKPipelineWorktools createPipeline(VkDevice* device, VkExtent2D swapExtent, Queu
     };
 
     VkPipeline graphicsPipeline;
-    vkCreateGraphicsPipelines(*device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &graphicsPipeline);
-    vkDestroyShaderModule(*device, vertModule, NULL);
-    vkDestroyShaderModule(*device, fragModule, NULL);
+    vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &graphicsPipeline);
+    vkDestroyShaderModule(device, vertModule, NULL);
+    vkDestroyShaderModule(device, fragModule, NULL);
     // Precisamos encontrar o índice da família de filas que suporta gráficos
 // Você provavelmente já fez isso para criar o Device, use o mesmo índice aqui.
     VkCommandPoolCreateInfo poolInfo = {
@@ -143,7 +159,7 @@ VKPipelineWorktools createPipeline(VkDevice* device, VkExtent2D swapExtent, Queu
     };
 
     VkCommandPool commandPool;
-    if (vkCreateCommandPool(*device, &poolInfo, NULL, &commandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(device, &poolInfo, NULL, &commandPool) != VK_SUCCESS) {
         SDL_Log("Falha ao criar Command Pool!");
         exit(1);
     }
@@ -154,7 +170,7 @@ VKPipelineWorktools createPipeline(VkDevice* device, VkExtent2D swapExtent, Queu
         .commandBufferCount = 1
     };
     VkCommandBuffer commandBuffer;
-    if (vkAllocateCommandBuffers(*device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
         SDL_Log("Falha ao alocar command buffer!");
     }
     return (VKPipelineWorktools){

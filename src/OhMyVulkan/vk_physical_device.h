@@ -1,3 +1,3 @@
 #pragma once
-#include "vulkan_triangle.h"
+#include "vk_instance.h"
 VkPhysicalDevice createPhysicalDevice(VkInstance vulkan_instance);

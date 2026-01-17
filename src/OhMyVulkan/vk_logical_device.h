@@ -1,4 +1,3 @@
 #pragma once
-#include "vulkan_triangle.h"
-
+#include "vk_instance.h"
 extern VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, VkDeviceQueueCreateInfo* queueCreateInfos, uint32_t queueCount);

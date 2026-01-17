@@ -1,7 +1,11 @@
 #include "vulkan_triangle.h"
 #include <string.h>
 
-
+SDL_windowHandle window = {
+    .width = 1000,
+    .height = 400,
+    .title = "Vulkan Triangle"
+};
 
 /*
 
@@ -81,13 +85,14 @@ int main(){
     VKSwapchainImages swapchainImages = getSwapchainImages(device, swapchain, imageCount, selectedFormat.format);
     VkRenderPass renderPass = createRenderPass(device, selectedFormat.format);
     VkFramebuffer* frameBuffers = createFramebuffers(&device, imageCount, &swapchainImages, &renderPass, swapExtent);
-    VKPipelineWorktools pipelineWorktools = createPipeline(&device, swapExtent, &queueFamilies, &renderPass);
-
+    VKPipelineWorktools pipelineWorktools = createPipeline(device, swapExtent, &queueFamilies, &renderPass);
+    
     const Vertex vertices[] = {
         {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Topo (Vermelho)
         {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}}, // Direita (Verde)
         {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}  // Esquerda (Azul)
     };
+    
     VKMemory vertexPostAllocationData = VKMemStoreVertex(physicalDevice, device, vertices, sizeof(vertices));
 
     VkSemaphore imageAvailableSemaphore;
@@ -107,7 +112,7 @@ int main(){
     if (vkCreateSemaphore(device, &semaphoreInfo, NULL, &imageAvailableSemaphore) != VK_SUCCESS ||
         vkCreateSemaphore(device, &semaphoreInfo, NULL, &renderFinishedSemaphore) != VK_SUCCESS ||
         vkCreateFence(device, &fenceInfo, NULL, &inFlightFence) != VK_SUCCESS) {
-        SDL_Log("Falha ao criar objetos de sincronização!");
+        printf("Falha ao criar fences ou swapchains!\n");
         return -1;
     }
     bool running = true;
@@ -116,6 +121,22 @@ int main(){
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
                 running = false;
+            }
+            else if (event.type == SDL_EVENT_WINDOW_RESIZED){
+                window.width = event.window.data1;
+                window.height = event.window.data2;
+                swapExtent = chooseSwapExtent(&capabilities, window.width, window.height);
+                swapchainCreateInfo.imageExtent = swapExtent;
+                destroyImageViews(device, swapchainImages);
+                destroyFramebuffers(device, frameBuffers, imageCount);
+                free(frameBuffers);
+                free(swapchainImages.swapChainImages);
+                free(swapchainImages.swapchainImageViews);
+                destroySwapchain(device, swapchain, NULL);
+                swapchain = createSwapchain(device, swapchainCreateInfo);
+                swapchainImages = getSwapchainImages(device, swapchain, imageCount, selectedFormat.format);
+                frameBuffers = createFramebuffers(&device, imageCount, &swapchainImages, &renderPass, swapExtent);
+                
             }
         }
         vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
@@ -148,6 +169,16 @@ int main(){
         
         vkCmdDraw(pipelineWorktools.commandBuffer, 3, 1, 0, 0);
         vkCmdEndRenderPass(pipelineWorktools.commandBuffer);
+        VkViewport viewport = {
+            .x = 0.0f, .y = 0.0f,
+            .width = (float)swapExtent.width,
+            .height = (float)swapExtent.height,
+            .minDepth = 0.0f, .maxDepth = 1.0f
+        };
+        vkCmdSetViewport(pipelineWorktools.commandBuffer, 0, 1, &viewport);
+        
+        VkRect2D scissor = { .offset = {0, 0}, .extent = swapExtent };
+        vkCmdSetScissor(pipelineWorktools.commandBuffer, 0, 1, &scissor);
 
         // 7. FECHAR A GRAVAÇÃO
         vkEndCommandBuffer(pipelineWorktools.commandBuffer);
@@ -177,7 +208,7 @@ int main(){
         };
 
         vkQueuePresentKHR(presentQueue, &presentInfo);
-        vkQueueWaitIdle(presentQueue);
+        // vkQueueWaitIdle(presentQueue);
     }
     for (uint32_t i = 0; i < swapchainImages.swapchainImageCount; i++) {
         vkDestroyImageView(device, swapchainImages.swapchainImageViews[i], NULL);
@@ -187,6 +218,7 @@ int main(){
     }
     free(frameBuffers);
     free(swapchainImages.swapChainImages);
+    free(swapchainImages.swapchainImageViews);
     vkDestroySemaphore(device, imageAvailableSemaphore, NULL);
     vkDestroySemaphore(device, renderFinishedSemaphore, NULL);
     vkDestroyFence(device, inFlightFence, NULL);

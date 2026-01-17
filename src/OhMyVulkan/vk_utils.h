@@ -11,7 +11,7 @@ typedef struct {
     float pos[2];
     float color[3];
 } Vertex;
-#include "vulkan_triangle.h"
+#include "vk_instance.h"
 
 
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "vulkan_triangle.h"
+#include "vk_instance.h"
 
 typedef struct {
     uint32_t swapchainImageCount;
@@ -43,3 +43,8 @@ extern void destroySwapchain(VkDevice device, VkSwapchainKHR swapchain, VkAlloca
 extern VkRenderPass createRenderPass(VkDevice device, VkFormat imageColorFormat);
 
 extern VkFramebuffer* createFramebuffers(VkDevice* device, uint32_t imageCount, VKSwapchainImages* swapchainImages, VkRenderPass* renderPass, VkExtent2D swapExtent);
+
+extern void destroyImageViews(VkDevice device, VKSwapchainImages swapchainImages);
+
+extern void destroyFramebuffers(VkDevice device, VkFramebuffer* frameBuffers, int framebufferCount);
+

@@ -1,5 +1,5 @@
 #pragma once
-#include "vulkan_triangle.h"
+#include "vk_instance.h"
 struct VKPipelineWorktools {
     VkPipeline graphicsPipeline;
     VkCommandPool commandPool;;
@@ -7,4 +7,4 @@ struct VKPipelineWorktools {
     VkPipelineLayout pipelineLayout;
 };
 typedef struct VKPipelineWorktools VKPipelineWorktools;
-extern VKPipelineWorktools createPipeline(VkDevice* device, VkExtent2D swapExtent, QueueFamilyIndices* queueFamilies, VkRenderPass* renderPass);
+extern VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, QueueFamilyIndices* queueFamilies, VkRenderPass* renderPass);
