@@ -1,0 +1,1 @@
+option('target_arch', type : 'string', value : 'native')

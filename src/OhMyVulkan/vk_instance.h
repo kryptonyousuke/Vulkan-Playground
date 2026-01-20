@@ -9,8 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "vk_utils.h"
-#define DEBUG false
+#define DEBUG true
 
-
+extern VkResult vr;
 
 VkInstance createVkInstance();

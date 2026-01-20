@@ -23,3 +23,4 @@
 #include "../OhMyVulkan/vk_physical_device.h"
 #include "../OhMyVulkan/vk_pipeline.h"
 #include "../OhMyVulkan/vk_mem.h"
+#include "../OhMyVulkan/vk_sync.h"

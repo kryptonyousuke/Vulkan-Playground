@@ -1,16 +1,24 @@
 project(
         'Vulkan Triangle',
         'C',
-        version:'1.0')
+        version:'1.0',
+        default_options: [
+          'optimization=3'
+        ])
+arch = get_option('target_arch')
+
+# The default value is native.
+# It does compile using specific special instructions like AVX2 (SIMD). 
+# Native value detects automatically the supported instructions.
+# Can be setted manually if you want to compile for another machine.
+add_project_arguments('-march=' + arch, language : 'c') 
+
 inc = include_directories('include')
-lib_vulkan = dependency('vulkan')
-lib_sdl3 = dependency('sdl3')
-dependencies = [lib_vulkan, lib_sdl3]
-vulkan_triangle_src = [
-        # main program
-        'src/playground/vulkan_triangle.c',
-        
-        # OhMyVulkan
+vulkan = dependency('vulkan')
+sdl3 = dependency('sdl3')
+dependencies = [vulkan, sdl3]
+
+oh_my_vulkan = static_library('OhMyVulkan', sources: [
         'src/OhMyVulkan/vk_utils.c',
         'src/OhMyVulkan/vk_swapchain.c',
         'src/OhMyVulkan/vk_instance.c',
@@ -18,7 +26,12 @@ vulkan_triangle_src = [
         'src/OhMyVulkan/vk_physical_device.c',
         'src/OhMyVulkan/vk_logical_device.c',
         'src/OhMyVulkan/vk_mem.c',
-        
+        'src/OhMyVulkan/vk_sync.c',
+])
+
+vulkan_triangle_src = [
+        # main program
+        'src/playground/vulkan_triangle.c',
         # utilities
         'src/utils/SDL_UTILS/SDL3_UTILS.c',
         'src/utils/sys_interaction.c',
@@ -40,5 +53,5 @@ foreach shader_name : shaders
                 install: true,
                 install_dir: shaders_dir)
 endforeach
-executable('VulkanTriangle', vulkan_triangle_src, shader_targets, include_directories: inc, dependencies: dependencies, install: true, install_dir: '')
+executable('VulkanTriangle', vulkan_triangle_src, shader_targets, link_with: oh_my_vulkan, include_directories: inc, dependencies: dependencies, install: true, install_dir: '')
 

@@ -1,17 +1,16 @@
 #include "vk_pipeline.h"
 #include "../utils/sys_interaction.h"
-// Define como os dados estão organizados na memória
+VkResult vr;
 VkVertexInputBindingDescription bindingDescription = {
     .binding = 0,
-    .stride = sizeof(float) * 5, // Ex: 3 floats para posição + 2 para UV (ou 3 para cor)
+    .stride = sizeof(float) * 5, // 3 floats for pos + 2 for UV
     .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 };
 
-// Define o que cada "Location" no Shader recebe
 VkVertexInputAttributeDescription attributeDescriptions[1] = {
     {
         .binding = 0,
-        .location = 0, // <--- Isto resolve o erro do Location 0!
+        .location = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT, // vec3 (x, y, z)
         .offset = 0
     }
@@ -49,7 +48,27 @@ VkPipelineInputAssemblyStateCreateInfo inputAssembly = {
     .primitiveRestartEnable = VK_FALSE
 };
 
+VkViewport placeholderViewport = {
+    .x        = 0.0f,
+    .y        = 0.0f,
+    .width    = 1.0f,
+    .height   = 1.0f,
+    .minDepth = 0.0f,
+    .maxDepth = 1.0f
+};
 
+VkRect2D placeholderScissor = {
+    .offset = {0, 0},
+    .extent = {1, 1}
+};
+
+VkPipelineViewportStateCreateInfo viewportState = {
+    .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+    .viewportCount = 1,
+    .pViewports    = &placeholderViewport,
+    .scissorCount  = 1,
+    .pScissors     = &placeholderScissor
+};
 VkDynamicState dynamicStates[] = {
     VK_DYNAMIC_STATE_VIEWPORT,
     VK_DYNAMIC_STATE_SCISSOR
@@ -63,7 +82,7 @@ VkPipelineDynamicStateCreateInfo dynamicStateInfo = {
 
 
 
-VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, QueueFamilyIndices* queueFamilies, VkRenderPass* renderPass){
+VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, QueueFamilyIndices* queueFamilies, VkRenderPass* renderPass, uint32_t commandBuffersNumber){
     size_t vertSize, fragSize;
     char* vertCode = readFile("./mesh_basic.vert.spv", &vertSize);
     char* fragCode = readFile("./mesh_basic.frag.spv", &fragSize);
@@ -95,22 +114,7 @@ VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, Queue
     };
 
 
-    VkViewport viewport = {
-        .x = 0.0f, .y = 0.0f,
-        .width = (float)swapExtent.width,
-        .height = (float)swapExtent.height,
-        .minDepth = 0.0f, .maxDepth = 1.0f
-    };
 
-    VkRect2D scissor = { .offset = {0, 0}, .extent = swapExtent };
-
-    VkPipelineViewportStateCreateInfo viewportState = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-        .viewportCount = 1,
-        .pViewports = &viewport,
-        .scissorCount = 1,
-        .pScissors = &scissor
-    };
 
     
     VkPipelineColorBlendStateCreateInfo colorBlending = {
@@ -122,21 +126,18 @@ VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, Queue
 
     VkPipelineLayout pipelineLayout;
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, NULL, &pipelineLayout) != VK_SUCCESS) {
-        SDL_Log("Erro ao criar Pipeline Layout!");
+        fprintf(stderr, "Erro ao criar Pipeline Layout!");
         exit(1);
     }
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertStageInfo, fragStageInfo};
     VkGraphicsPipelineCreateInfo pipelineInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .stageCount = 2,
-        .pStages = shaderStages, // <--- AQUI entram os shaders!
+        .pStages = shaderStages,
         
-        // ... aqui entram as outras structs (VertexInput, Rasterizer, etc) ...
         .pVertexInputState = &vertexInputInfo,
         .pInputAssemblyState = &inputAssembly,
-        // .pViewportState = &viewportState,
-        // Desactivated because DynamicStates allow us to not recreate the pipeline
-        // on each resize. In other words, for performance.
+        .pViewportState = &viewportState,
         .pDynamicState = &dynamicStateInfo,
         .pRasterizationState = &rasterizer,
         .pMultisampleState = &multisampling,
@@ -147,11 +148,13 @@ VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, Queue
     };
 
     VkPipeline graphicsPipeline;
-    vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &graphicsPipeline);
+    vr = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &graphicsPipeline);
+    if (vr != VK_SUCCESS) {
+        fprintf(stderr, "Falha ao criar Pipeline!\n");
+        exit(1);
+    }
     vkDestroyShaderModule(device, vertModule, NULL);
     vkDestroyShaderModule(device, fragModule, NULL);
-    // Precisamos encontrar o índice da família de filas que suporta gráficos
-// Você provavelmente já fez isso para criar o Device, use o mesmo índice aqui.
     VkCommandPoolCreateInfo poolInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
@@ -160,22 +163,23 @@ VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, Queue
 
     VkCommandPool commandPool;
     if (vkCreateCommandPool(device, &poolInfo, NULL, &commandPool) != VK_SUCCESS) {
-        SDL_Log("Falha ao criar Command Pool!");
+        fprintf(stderr, "Falha ao criar Command Pool!\n");
         exit(1);
     }
+    
     VkCommandBufferAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool = commandPool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1
+        .commandBufferCount = commandBuffersNumber
     };
-    VkCommandBuffer commandBuffer;
-    if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
-        SDL_Log("Falha ao alocar command buffer!");
+    VkCommandBuffer* commandBuffers = calloc(commandBuffersNumber, sizeof(VkCommandBuffer));
+    if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers) != VK_SUCCESS) {
+        fprintf(stderr, "Falha ao alocar command buffer!");
     }
     return (VKPipelineWorktools){
       .graphicsPipeline = graphicsPipeline,
-      .commandBuffer = commandBuffer,
+      .commandBuffers = commandBuffers,
       .commandPool = commandPool,
       .pipelineLayout = pipelineLayout
     };
