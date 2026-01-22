@@ -14,6 +14,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <time.h>
 #include "../utils/SDL_UTILS/SDL3_UTILS.h"
 #include "../utils/sys_interaction.h"
 #include "../OhMyVulkan/vk_utils.h"

@@ -1,20 +1,7 @@
 #include "vk_pipeline.h"
 #include "../utils/sys_interaction.h"
 VkResult vr;
-VkVertexInputBindingDescription bindingDescription = {
-    .binding = 0,
-    .stride = sizeof(float) * 5, // 3 floats for pos + 2 for UV
-    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-};
 
-VkVertexInputAttributeDescription attributeDescriptions[1] = {
-    {
-        .binding = 0,
-        .location = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT, // vec3 (x, y, z)
-        .offset = 0
-    }
-};
 
 VkPipelineColorBlendAttachmentState colorBlendAttachment = {
     .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
@@ -29,9 +16,9 @@ VkPipelineRasterizationStateCreateInfo rasterizer = {
     .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
     .depthClampEnable = VK_FALSE,
     .rasterizerDiscardEnable = VK_FALSE,
-    .polygonMode = VK_POLYGON_MODE_FILL,
+    .polygonMode = VK_POLYGON_MODE_LINE,
     .lineWidth = 1.0f,
-    .cullMode = VK_CULL_MODE_BACK_BIT,
+    .cullMode = VK_CULL_MODE_NONE,
     .frontFace = VK_FRONT_FACE_CLOCKWISE,
     .depthBiasEnable = VK_FALSE
 };
@@ -82,7 +69,7 @@ VkPipelineDynamicStateCreateInfo dynamicStateInfo = {
 
 
 
-VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, QueueFamilyIndices* queueFamilies, VkRenderPass* renderPass, uint32_t commandBuffersNumber){
+VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, QueueFamilyIndices* queueFamilies, VkRenderPass* renderPass, uint32_t commandBuffersNumber, VkVertexInputBindingDescription vertexBindingDescription, VkVertexInputAttributeDescription* vertexAttributeDescriptions){
     size_t vertSize, fragSize;
     char* vertCode = readFile("./mesh_basic.vert.spv", &vertSize);
     char* fragCode = readFile("./mesh_basic.frag.spv", &fragSize);
@@ -108,9 +95,9 @@ VKPipelineWorktools createPipeline(VkDevice device, VkExtent2D swapExtent, Queue
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions = &bindingDescription,
-        .vertexAttributeDescriptionCount = 1,
-        .pVertexAttributeDescriptions = attributeDescriptions
+        .pVertexBindingDescriptions = &vertexBindingDescription,
+        .vertexAttributeDescriptionCount = 2,
+        .pVertexAttributeDescriptions = vertexAttributeDescriptions
     };
 
 

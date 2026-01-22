@@ -6,6 +6,25 @@ SDL_windowHandle window = {
     .height = 400,
     .title = "Vulkan Triangle"
 };
+VkVertexInputBindingDescription bindingDescription = {
+    .binding = 0,
+    .stride = sizeof(float) * 5, // 3 floats for pos + 2 for UV
+    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+};
+
+VkVertexInputAttributeDescription attributeDescriptions[] = {
+    {
+        .binding = 0,
+        .location = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT, // vec3 (x, y, z)
+        .offset = 0
+    }, {
+        .binding = 0,
+        .location = 1, // The same Fragment Shader input location.
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = 2 * sizeof(float) // Starts 2 floats after.
+    }
+};
 
 /*
 
@@ -16,7 +35,13 @@ SDL_windowHandle window = {
 int main(){
     initWindow(&window);
     VkInstance vulkan_instance = createVkInstance();
-
+    // srand(time(NULL));
+    // float x1 = ((rand() % 200) - 100) / 100.0f;
+    // float y1 = ((rand() % 200) - 100) / 100.0f;
+    // float x2 = ((rand() % 200) - 100) / 100.0f;
+    // float y2 = ((rand() % 200) - 100) / 100.0f;
+    // float x3 = ((rand() % 200) - 100) / 100.0f;
+    // float y3 = ((rand() % 200) - 100) / 100.0f;
     
     VkSurfaceKHR surface;
     SDL_Vulkan_CreateSurface(window.window, vulkan_instance, NULL, &surface);
@@ -28,7 +53,7 @@ int main(){
         fprintf(stderr, "Falha ao obter as capacidades da superficie!\n");
         exit(vr);
     }
-
+    
     uint32_t imageCount = capabilities.minImageCount + 1;
 
     if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
@@ -90,12 +115,29 @@ int main(){
     VKSwapchainImages swapchainImages = getSwapchainImages(device, swapchain, imageCount, selectedFormat.format);
     VkRenderPass renderPass = createRenderPass(device, selectedFormat.format);
     VkFramebuffer* frameBuffers = createFramebuffers(&device, imageCount, &swapchainImages, &renderPass, swapExtent);
-    VKPipelineWorktools pipelineWorktools = createPipeline(device, swapExtent, &queueFamilies, &renderPass, MAX_FRAMES_IN_FLIGHT);
+    VKPipelineWorktools pipelineWorktools = createPipeline(device, swapExtent, &queueFamilies, &renderPass, MAX_FRAMES_IN_FLIGHT, bindingDescription, attributeDescriptions);
     
+    // const Vertex vertices[] = {
+    //     {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Top (Red)
+    //     {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}}, // Right (Green)
+    //     {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}  // Left (Blue)
+    // };
+    // const Vertex vertices[] = {
+    // 
+    //     {{ x1, y1}, {1.0f, 0.0f, 0.0f}}, // Top (Red)
+    //     {{ x2, y2}, {0.0f, 1.0f, 0.0f}}, // Right (Green)
+    //     {{ x3, y3}, {0.0f, 0.0f, 1.0f}},  // Left (Blue)
+    // };
     const Vertex vertices[] = {
-        {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Top (Red)
-        {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}}, // Right (Green)
-        {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}  // Left (Blue)
+        // Primeiro triângulo
+        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},  // Topo-Esquerda
+        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},  // Topo-Direita
+        {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}},  // Baixo-Esquerda
+    
+        // Segundo triângulo
+        {{0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},  // Topo-Direita
+        {{0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}},  // Baixo-Direita
+        {{-0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}}   // Baixo-Esquerda
     };
     
     VKMemory vertexPostAllocationData = VKMemStoreVertex(physicalDevice, device, vertices, sizeof(vertices));
@@ -199,7 +241,7 @@ int main(){
         
         VkRect2D scissor = { .offset = {0, 0}, .extent = swapExtent };
         vkCmdSetScissor(pipelineWorktools.commandBuffers[currentFrame], 0, 1, &scissor);
-        vkCmdDraw(pipelineWorktools.commandBuffers[currentFrame], 3, 1, 0, 0);
+        vkCmdDraw(pipelineWorktools.commandBuffers[currentFrame], sizeof(vertices) / sizeof(vertices[0]), 1, 0, 0);
         vkCmdEndRenderPass(pipelineWorktools.commandBuffers[currentFrame]);
 
 

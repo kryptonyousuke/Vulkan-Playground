@@ -1,5 +1,5 @@
 #include "sys_interaction.h"
-char* readFile(const char* filename, size_t* size) {
+inline char* readFile(const char* filename, size_t* size) {
     FILE* file = fopen(filename, "rb");
     if (!file) return NULL;
     fseek(file, 0, SEEK_END);

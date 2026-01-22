@@ -1,10 +1,13 @@
 #include "vk_instance.h"
 
 uint32_t sdlExtensionCount = 0;
-bool enableValidationLayers = DEBUG;
+
+#ifdef ENABLED_DEBUG
+
 static const char* validationLayers[] = {
     "VK_LAYER_KHRONOS_validation"
 };
+#endif
 static const char* additionalInstanceExtensions[] = {
     "VK_EXT_surface_maintenance1",
     "VK_KHR_get_surface_capabilities2"
@@ -16,7 +19,7 @@ VkApplicationInfo appInfo = {
     .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
     .pEngineName = "No Engine",
     .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-    .apiVersion = VK_API_VERSION_1_3
+    .apiVersion = VK_API_VERSION_1_4
 };
 VkInstance createVkInstance(){
     // Enumerate supported instance extensions
@@ -46,22 +49,23 @@ VkInstance createVkInstance(){
     for (uint32_t i = 0; i < totalCount; i++){
         printf("        %s\n", allExtensions[i]);
     }
-    bool enableValidationLayers = DEBUG; 
 
     VkInstanceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pApplicationInfo = &appInfo,
         .enabledExtensionCount = totalCount,
         .ppEnabledExtensionNames = allExtensions,
+#ifdef ENABLED_DEBUG
+        .enabledLayerCount = 1,
+        .ppEnabledLayerNames = validationLayers,
+#else
+        .enabledLayerCount = 0,
+#endif
         .pNext = NULL
     };
 
-    if (enableValidationLayers) {
-        createInfo.enabledLayerCount = 1;
-        createInfo.ppEnabledLayerNames = validationLayers;
-    } else {
-        createInfo.enabledLayerCount = 0;
-    }
+
+
     VkInstance vulkan_instance;
     VkResult result = vkCreateInstance(&createInfo, NULL, &vulkan_instance);
     free(allExtensions);

@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "vk_utils.h"
-#define DEBUG true
 
 extern VkResult vr;
 

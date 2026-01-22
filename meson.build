@@ -6,6 +6,11 @@ project(
           'optimization=3'
         ])
 arch = get_option('target_arch')
+args = []
+if get_option('enabledebug')
+  args += '-DENABLED_DEBUG'
+  message('Debug mode enabled.')
+endif
 
 # The default value is native.
 # It does compile using specific special instructions like AVX2 (SIMD). 
@@ -27,7 +32,7 @@ oh_my_vulkan = static_library('OhMyVulkan', sources: [
         'src/OhMyVulkan/vk_logical_device.c',
         'src/OhMyVulkan/vk_mem.c',
         'src/OhMyVulkan/vk_sync.c',
-])
+], c_args: args)
 
 vulkan_triangle_src = [
         # main program
