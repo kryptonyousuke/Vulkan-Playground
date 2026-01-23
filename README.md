@@ -1,4 +1,7 @@
 # Vulkan-Playground
+![GitHub last commit](https://img.shields.io/github/last-commit/kryptonyousuke/Vulkan-Playground?style=for-the-badge) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/kryptonyousuke/Vulkan-Playground/build.yml?style=for-the-badge)
+
+
 I will be using this repository to learn raw vulkan, vulkan frameworks, rust and useful tools I found navigating on the internet.
 
 ## What you need to know
