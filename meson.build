@@ -10,6 +10,7 @@ project(
 cargo = find_program('cargo')
 glslc = find_program('glslc')
 
+rust_path = 'src/playground/rust/'
 
 
 arch = get_option('target_arch')
@@ -65,8 +66,15 @@ foreach shader_name : shaders
     install: true,
     install_dir: shaders_dir)
 endforeach
+vulkan_triangle_rs = custom_target(
+  command: [cargo, 'build', '--release', '--manifest-path', meson.project_source_root() / rust_path / 'vulkan_triangle/Cargo.toml',
+  '&&', 'cp', meson.project_source_root() / 'src/playground/rust/vulkan_triangle/target/release/vulkan_triangle', '@OUTPUT@'],
+  output: 'vulkan_triangle',
+  console: true)
+  
+  
 
+rust_targets = vulkan_triangle_rs
+all_targets = shader_targets + rust_targets
 
-
-executable('VulkanTriangle', vulkan_triangle_src, shader_targets, link_with: oh_my_vulkan, include_directories: inc, dependencies: dependencies, install: true, install_dir: '')
-
+executable('VulkanTriangle', vulkan_triangle_src, all_targets, link_with: oh_my_vulkan, include_directories: inc, dependencies: dependencies, install: true, install_dir: '')
