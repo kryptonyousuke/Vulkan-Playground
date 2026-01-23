@@ -3,8 +3,6 @@ name: Build Vulkan Project (C + Rust)
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
   build:
@@ -13,16 +11,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install System Dependencies
+    - name: Install Build Tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          meson \
-          ninja-build \
-          libvulkan-dev \
-          vulkan-tools \
-          libsdl3-dev # Vejo que você usa SDL3_UTILS
+        sudo apt-get install -y build-essential meson ninja-build libvulkan-dev vulkan-tools
+
+    - name: Build and Install SDL3 from Source
+      run: |
+        git clone https://github.com/libsdl-org/SDL.git -b main
+        cd SDL
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        sudo cmake --build . --target install
 
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
@@ -39,7 +40,7 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: vulkan-playground-binaries
+        name: vulkan-playground
         path: |
           builddir/VulkanTriangle
           src/playground/rust/vulkan_triangle/target/release/vulkan_triangle
