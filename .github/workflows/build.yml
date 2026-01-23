@@ -9,31 +9,37 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
-      
+
+    defaults:
+      run:
+        working-directory: .
+
     steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
     - name: Install System Dependencies
       run: |
+        # Inicializa o pacman para o container
         pacman -Syu --noconfirm
-        pacman -S --noconfirm \
-          base-devel \
-          meson \
-          ninja \
-          cmake \
-          vulkan-devel \
-          shaderc \
-          sdl3 \
-          rustup \
-          git
-    - name: Builds everything (Meson)
+        pacman -S --noconfirm base-devel meson ninja cmake vulkan-devel shaderc sdl3 rustup git
+        rustup default stable
+
+    - name: Debug Path
       run: |
-        meson setup builddir . --buildtype=release
+        pwd
+        ls -F
+        # O comando acima deve mostrar o seu 'meson.build' no log
+
+    - name: Builds everything
+      run: |
+        meson setup builddir --buildtype=release
         meson compile -C builddir
+
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: vulkan-playground-arch
         path: |
-          cd $GITHUB_WORKSPACE
-          ls -F # Comando de debug para ver se o meson.build está aqui
-          meson setup builddir --buildtype=release
-          meson compile -C builddir
+          builddir/VulkanTriangle
+          src/playground/rust/vulkan_triangle/target/release/vulkan_triangle
