@@ -18,6 +18,7 @@ jobs:
           build-essential \
           meson \
           ninja-build \
+          google-shaderc \
           libvulkan-dev \
           vulkan-tools \
           libx11-dev \
