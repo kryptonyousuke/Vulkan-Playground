@@ -1,4 +1,4 @@
-name: Build Vulkan Project (C + Rust)
+name: Build Vulkan Project (Arch Container)
 
 on:
   push:
@@ -7,59 +7,31 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    container:
+      image: archlinux:latest
+      
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Build Tools
+    - name: Install System Dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
+        pacman -Syu --noconfirm
+        pacman -S --noconfirm \
+          base-devel \
           meson \
-          ninja-build \
-          google-shaderc \
-          libvulkan-dev \
-          vulkan-tools \
-          libx11-dev \
-          libxcursor-dev \
-          libxext-dev \
-          libxfixes-dev \
-          libxi-dev \
-          libxinerama-dev \
-          libxrandr-dev \
-          libxrender-dev \
-          libxss-dev \
-          libxtst-dev \
-          libwayland-dev \
-          libxkbcommon-dev \
-          wayland-protocols
-
-    - name: Build and Install SDL3 from Source
-      run: |
-        git clone https://github.com/libsdl-org/SDL.git -b main
-        cd SDL
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
-        sudo cmake --build . --target install
-
-    - name: Set up Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Build C Library (Meson)
+          ninja \
+          cmake \
+          vulkan-devel \
+          shaderc \
+          sdl3 \
+          rustup \
+          git
+    - name: Builds everything (Meson)
       run: |
         meson setup builddir --buildtype=release
         meson compile -C builddir
-
-    - name: Build Rust Project (Cargo)
-      working-directory: src/playground/rust/vulkan_triangle
-      run: cargo build --release
-
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: vulkan-playground
+        name: vulkan-playground-arch
         path: |
           builddir/VulkanTriangle
           src/playground/rust/vulkan_triangle/target/release/vulkan_triangle
