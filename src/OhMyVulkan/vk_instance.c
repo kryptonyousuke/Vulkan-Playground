@@ -42,7 +42,7 @@ VkInstance createVkInstance(){
     
     const char** allExtensions = calloc(totalCount, sizeof(const char*));
     for (uint32_t i = 0; i < sdlExtensionCount; i++)                 allExtensions[i] = sdlExtensions[i];
-    for (uint32_t i = 0; i < additionalCount; i++)        allExtensions[sdlExtensionCount + i] = additionalInstanceExtensions[i];
+    for (uint32_t i = 0; i < additionalCount; i++)                   allExtensions[sdlExtensionCount + i] = additionalInstanceExtensions[i];
     
     // Shows the activated extensions
     printf("Activated instance extensions:\n");

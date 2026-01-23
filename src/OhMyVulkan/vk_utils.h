@@ -25,7 +25,7 @@ typedef struct {
 extern QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 /*
-* Creates a shader module
+* Creates a shader module.
 *
 * @param device Device
 * @param code Pointer to the shader code
