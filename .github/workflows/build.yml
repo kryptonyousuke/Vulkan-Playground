@@ -33,5 +33,7 @@ jobs:
       with:
         name: vulkan-playground-arch
         path: |
-          builddir/VulkanTriangle
-          src/playground/rust/vulkan_triangle/target/release/vulkan_triangle
+          cd $GITHUB_WORKSPACE
+          ls -F # Comando de debug para ver se o meson.build está aqui
+          meson setup builddir --buildtype=release
+          meson compile -C builddir
