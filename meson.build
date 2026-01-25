@@ -28,8 +28,12 @@ add_project_arguments('-march=' + arch, language : 'c')
 
 inc = include_directories('include')
 vulkan = dependency('vulkan')
+vulkan_dep = vulkan.partial_dependency(
+  includes: true,
+  link_args: true)
+vulkan_headers = vulkan.partial_dependency(includes: true)
 sdl3 = dependency('sdl3')
-dependencies = [vulkan, sdl3]
+
 
 oh_my_vulkan = static_library('OhMyVulkan', sources: [
   'src/OhMyVulkan/vk_utils.c',
@@ -41,6 +45,11 @@ oh_my_vulkan = static_library('OhMyVulkan', sources: [
   'src/OhMyVulkan/vk_mem.c',
   'src/OhMyVulkan/vk_sync.c',
 ], c_args: args)
+
+oh_my_vulkan_dep = declare_dependency(
+  link_with: oh_my_vulkan,
+  include_directories: inc,
+  dependencies: vulkan_dep)
 
 vulkan_triangle_src = [
   # main program
@@ -66,15 +75,18 @@ foreach shader_name : shaders
     install: true,
     install_dir: shaders_dir)
 endforeach
+vulkan_triangle_deps = [vulkan_dep, sdl3, oh_my_vulkan_dep]
 vulkan_triangle_rs = custom_target(
   command: [cargo, 'build', '--release', '--manifest-path', meson.project_source_root() / rust_path / 'vulkan_triangle/Cargo.toml',
   '&&', 'cp', meson.project_source_root() / 'src/playground/rust/vulkan_triangle/target/release/vulkan_triangle', '@OUTPUT@'],
-  output: 'vulkan_triangle',
-  console: true)
+  output: 'vulkan_triangle_rs',
+  console: true,
+  install: true, install_dir: get_option('bindir'))
   
   
 
 rust_targets = vulkan_triangle_rs
-all_targets = shader_targets + rust_targets
+all_targets = shader_targets
 
-executable('VulkanTriangle', vulkan_triangle_src, all_targets, link_with: oh_my_vulkan, include_directories: inc, dependencies: dependencies, install: true, install_dir: '')
+executable('VulkanTriangle', vulkan_triangle_src, all_targets, 
+          include_directories: inc, dependencies: vulkan_triangle_deps, install: true)
