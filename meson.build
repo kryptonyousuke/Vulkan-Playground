@@ -77,13 +77,22 @@ foreach shader_name : shaders
 endforeach
 vulkan_triangle_deps = [vulkan_dep, sdl3, oh_my_vulkan_dep]
 vulkan_triangle_rs = custom_target(
-  command: [cargo, 'build', '--release', '--manifest-path', meson.project_source_root() / rust_path / 'vulkan_triangle/Cargo.toml',
-  '&&', 'cp', meson.project_source_root() / 'src/playground/rust/vulkan_triangle/target/release/vulkan_triangle', '@OUTPUT@'],
+  'vulkan_triangle_rs',
+  command: [
+    cargo,
+    'build',
+    '--release',
+    '--target-dir', meson.current_build_dir(),
+    '--manifest-path', meson.project_source_root() / rust_path / 'vulkan_triangle/Cargo.toml',
+  ],
   output: 'vulkan_triangle_rs',
+  build_always_stale: true,
   console: true,
-  install: true, install_dir: get_option('bindir'))
-  
-  
+  install: true,
+  install_dir: get_option('bindir'),
+)
+
+
 
 rust_targets = vulkan_triangle_rs
 all_targets = shader_targets
