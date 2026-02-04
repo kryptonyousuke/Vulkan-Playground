@@ -34,7 +34,7 @@ VkVertexInputAttributeDescription attributeDescriptions[] = {
 
 int main(){
     initWindow(&window);
-    VkInstance vulkan_instance = createVkInstance();
+    VulkanInstance vulkan_instance = createVkInstance();
     // srand(time(NULL));
     // float x1 = ((rand() % 200) - 100) / 100.0f;
     // float y1 = ((rand() % 200) - 100) / 100.0f;
@@ -44,8 +44,8 @@ int main(){
     // float y3 = ((rand() % 200) - 100) / 100.0f;
     
     VkSurfaceKHR surface;
-    SDL_Vulkan_CreateSurface(window.window, vulkan_instance, NULL, &surface);
-    VkPhysicalDevice physicalDevice = createPhysicalDevice(vulkan_instance); 
+    SDL_Vulkan_CreateSurface(window.window, vulkan_instance.instance, NULL, &surface);
+    VkPhysicalDevice physicalDevice = createPhysicalDevice(vulkan_instance.instance); 
     VkSurfaceCapabilitiesKHR capabilities;
     vr = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
 
@@ -117,17 +117,7 @@ int main(){
     VkFramebuffer* frameBuffers = createFramebuffers(&device, imageCount, &swapchainImages, &renderPass, swapExtent);
     VKPipelineWorktools pipelineWorktools = createPipeline(device, swapExtent, &queueFamilies, &renderPass, MAX_FRAMES_IN_FLIGHT, bindingDescription, attributeDescriptions);
     
-    // const Vertex vertices[] = {
-    //     {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Top (Red)
-    //     {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}}, // Right (Green)
-    //     {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}  // Left (Blue)
-    // };
-    // const Vertex vertices[] = {
-    // 
-    //     {{ x1, y1}, {1.0f, 0.0f, 0.0f}}, // Top (Red)
-    //     {{ x2, y2}, {0.0f, 1.0f, 0.0f}}, // Right (Green)
-    //     {{ x3, y3}, {0.0f, 0.0f, 1.0f}},  // Left (Blue)
-    // };
+    
     const Vertex vertices[] = {
         // Primeiro triângulo
         {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},  // Topo-Esquerda
@@ -260,15 +250,8 @@ int main(){
         };
 
         vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
-
-        // VkSwapchainPresentFenceInfoEXT presentFenceInfo = {
-        //     .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_FENCE_INFO_EXT,
-        //     .swapchainCount = 1,
-        //     .pFences = &presentFences[currentFrame],
-        // };
         VkSwapchainPresentModeInfoKHR presentModeInfo = {
             .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_MODE_INFO_KHR,
-            // .pNext = &presentFenceInfo,
             .pPresentModes = &presentMode,
             .swapchainCount = 1,
         };
@@ -279,10 +262,9 @@ int main(){
             .pWaitSemaphores = &renderFinishedSemaphores[imageIndex], 
             .swapchainCount = 1,
             .pSwapchains = &swapchain,
-            .pImageIndices = &imageIndex
+            .pImageIndices = &imageIndex,
         };
-        // vkWaitForFences(device, 1, &presentFences[currentFrame], VK_TRUE, UINT64_MAX);
-        // vkResetFences(device, 1, &presentFences[currentFrame]);
+
         vkQueuePresentKHR(presentQueue, &presentInfo);
         
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -318,8 +300,8 @@ int main(){
     vkDestroyRenderPass(device, renderPass, NULL);
     destroySwapchain(device, swapchain, NULL);
     vkDestroyDevice(device, NULL);
-    vkDestroySurfaceKHR(vulkan_instance, surface, NULL);
-    vkDestroyInstance(vulkan_instance, NULL);
+    vkDestroySurfaceKHR(vulkan_instance.instance, surface, NULL);
+    destroyInstance(vulkan_instance);
     SDL_DestroyWindow(window.window);
     SDL_Quit();
     return 0;

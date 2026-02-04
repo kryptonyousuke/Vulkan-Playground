@@ -21,7 +21,7 @@ VkApplicationInfo appInfo = {
     .engineVersion = VK_MAKE_VERSION(1, 0, 0),
     .apiVersion = VK_API_VERSION_1_4
 };
-VkInstance createVkInstance(){
+VulkanInstance createVkInstance(){
     // Enumerate supported instance extensions
     uint32_t vkSupportedInstanceExtensionsCount;
     vkEnumerateInstanceExtensionProperties(NULL, &vkSupportedInstanceExtensionsCount, NULL);
@@ -68,11 +68,19 @@ VkInstance createVkInstance(){
 
     VkInstance vulkan_instance;
     VkResult result = vkCreateInstance(&createInfo, NULL, &vulkan_instance);
-    free(allExtensions);
+
     if (result != VK_SUCCESS){
         fprintf(stderr, "Erro no vkCreateInstance: %d\n", result);
         exit(1);
     }
     fprintf(stdout, "Instancia criada em: %p\n", (void*)vulkan_instance);
-    return vulkan_instance;
+    return (VulkanInstance){
+        .instance = vulkan_instance,
+        .instanceExtensions = allExtensions
+    };
+}
+
+void destroyInstance(VulkanInstance vkInstance){
+    free((void*)vkInstance.instanceExtensions); // explicit cast just to silence fool warnings
+    vkDestroyInstance(vkInstance.instance, VK_NULL_HANDLE);
 }

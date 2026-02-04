@@ -12,4 +12,12 @@
 
 extern VkResult vr;
 
-VkInstance createVkInstance();
+struct VulkanInstance {
+    VkInstance instance;
+    VkExtensionProperties* vkSupportedInstanceExtensions;
+    const char* const* instanceExtensions;
+};
+typedef struct VulkanInstance VulkanInstance;
+
+VulkanInstance createVkInstance();
+extern void destroyInstance(VulkanInstance vkInstance);
